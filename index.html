@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgentHub · Panel de administración</title>
+
+  <!-- Tailwind vía CDN (Play CDN v3). darkMode "class": el modo oscuro depende de la clase .dark en <html> -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      // Clases que solo aparecen cuando JS las agrega: se generan desde el inicio
+      safelist: ["grid-rows-[1fr]", "rotate-180", "bottom-full", "mb-1", "opacity-50"],
+    };
+    // Aplicar el tema guardado antes de pintar, para evitar un parpadeo claro → oscuro
+    try {
+      if (localStorage.getItem("agenthub-theme") === "dark") document.documentElement.classList.add("dark");
+    } catch (error) { /* sin localStorage: se queda en modo claro */ }
+  </script>
+</head>
+
+<body class="h-full bg-slate-100 text-slate-800 antialiased dark:bg-slate-950 dark:text-slate-100">
+  <div class="flex min-h-full">
+
+    <!-- ============ SIDEBAR ============ -->
+    <nav aria-label="Secciones del panel"
+      class="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-slate-200 bg-white px-3 py-5 lg:w-64 dark:border-slate-800 dark:bg-slate-900">
+      <a href="#dashboard" class="mb-8 flex items-center gap-2 px-3 text-xl font-bold text-indigo-600 dark:text-indigo-400">
+        <span aria-hidden="true">🤖</span> AgentHub
+      </a>
+      <ul class="space-y-1 text-sm">
+        <li><a href="#dashboard" data-nav="dashboard" class="flex items-center gap-3 rounded-lg px-3 py-2"><span aria-hidden="true">📊</span> Dashboard</a></li>
+        <li><a href="#usuarios" data-nav="usuarios" class="flex items-center gap-3 rounded-lg px-3 py-2"><span aria-hidden="true">👥</span> Usuarios</a></li>
+        <li><a href="#agentes" data-nav="agentes" class="flex items-center gap-3 rounded-lg px-3 py-2"><span aria-hidden="true">🤖</span> Agentes</a></li>
+        <li><a href="#skills" data-nav="skills" class="flex items-center gap-3 rounded-lg px-3 py-2"><span aria-hidden="true">🧩</span> Skills</a></li>
+        <li><a href="#contrataciones" data-nav="contrataciones" class="flex items-center gap-3 rounded-lg px-3 py-2"><span aria-hidden="true">📄</span> Contrataciones</a></li>
+        <li><a href="#errores" data-nav="errores" class="flex items-center gap-3 rounded-lg px-3 py-2"><span aria-hidden="true">⚠️</span> Log de errores</a></li>
+      </ul>
+      <p class="mt-auto px-3 text-xs text-slate-400">Prototipo · datos de ejemplo</p>
+    </nav>
+
+    <div class="flex min-w-0 flex-1 flex-col">
+
+      <!-- ============ HEADER ============ -->
+      <header class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/90 px-6 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
+        <h1 id="section-title" class="text-lg font-semibold">Dashboard</h1>
+        <div class="flex items-center gap-3">
+          <button id="theme-toggle" type="button" aria-pressed="false" aria-label="Cambiar a modo oscuro"
+            class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">
+            <span id="theme-icon" aria-hidden="true">🌙</span>
+          </button>
+          <span class="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white" title="Administrador">AD</span>
+        </div>
+      </header>
+
+      <main class="flex-1 p-6">
+
+        <!-- ============ 1. DASHBOARD ============ -->
+        <section id="dashboard" data-section="dashboard" aria-labelledby="dashboard-heading" class="space-y-6">
+          <h2 id="dashboard-heading" class="sr-only">Dashboard</h2>
+          <div class="grid grid-cols-2 gap-4 xl:grid-cols-4">
+            <article class="rounded-xl bg-white p-5 shadow-sm dark:bg-slate-900">
+              <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-xl dark:bg-emerald-500/20" aria-hidden="true">💰</span>
+              <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">Ingresos totales</p>
+              <p id="metric-revenue" class="text-2xl font-bold">—</p>
+            </article>
+            <article class="rounded-xl bg-white p-5 shadow-sm dark:bg-slate-900">
+              <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-xl dark:bg-amber-500/20" aria-hidden="true">🏷️</span>
+              <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">Pérdidas por descuentos y cupones</p>
+              <p id="metric-discounts" class="text-2xl font-bold">—</p>
+            </article>
+            <article class="rounded-xl bg-white p-5 shadow-sm dark:bg-slate-900">
+              <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 text-xl dark:bg-indigo-500/20" aria-hidden="true">✅</span>
+              <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">Agentes activos</p>
+              <p id="metric-active" class="text-2xl font-bold">—</p>
+            </article>
+            <article class="rounded-xl bg-white p-5 shadow-sm dark:bg-slate-900">
+              <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 text-xl dark:bg-red-500/20" aria-hidden="true">🚨</span>
+              <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">Agentes fallando</p>
+              <p id="metric-failing" class="text-2xl font-bold">—</p>
+            </article>
+          </div>
+          <div class="flex h-64 items-center justify-center rounded-xl border-2 border-dashed border-slate-300 text-slate-400 dark:border-slate-700 dark:text-slate-500">
+            Gráfico de actividad semanal (próximamente)
+          </div>
+        </section>
+
+        <!-- ============ 2. USUARIOS ============ -->
+        <section id="usuarios" data-section="usuarios" aria-labelledby="usuarios-heading" class="hidden">
+          <h2 id="usuarios-heading" class="sr-only">Gestión de usuarios</h2>
+          <div data-scroll class="overflow-x-auto rounded-xl bg-white shadow-sm dark:bg-slate-900">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+                <tr>
+                  <th scope="col" class="px-4 py-3">Nombre</th>
+                  <th scope="col" class="px-4 py-3">Email</th>
+                  <th scope="col" class="px-4 py-3">Plan</th>
+                  <th scope="col" class="px-4 py-3">Estado</th>
+                  <th scope="col" class="px-4 py-3 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="users-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============ 3. AGENTES ============ -->
+        <section id="agentes" data-section="agentes" aria-labelledby="agentes-heading" class="hidden">
+          <h2 id="agentes-heading" class="sr-only">Gestión de agentes</h2>
+          <ul id="agents-list" class="grid gap-4 lg:grid-cols-2"></ul>
+        </section>
+
+        <!-- ============ 4. SKILLS ============ -->
+        <section id="skills" data-section="skills" aria-labelledby="skills-heading" class="hidden space-y-4">
+          <h2 id="skills-heading" class="sr-only">Catálogo de skills</h2>
+          <p class="rounded-xl border-l-4 border-indigo-500 bg-white p-4 text-sm shadow-sm dark:bg-slate-900">
+            <strong>¿Qué es una skill?</strong> Es una capacidad que se adjunta a un agente para que pueda realizar un tipo de tarea,
+            como navegar por la web o leer documentos. Un agente sin skills solo conversa; cada skill que el cliente contrata
+            le da una herramienta nueva y suma su precio al contrato.
+          </p>
+          <ul id="skills-list" class="grid gap-4 md:grid-cols-2"></ul>
+        </section>
+
+        <!-- ============ 5. CONTRATACIONES ============ -->
+        <section id="contrataciones" data-section="contrataciones" aria-labelledby="contrataciones-heading" class="hidden">
+          <h2 id="contrataciones-heading" class="sr-only">Contrataciones de agentes</h2>
+          <div data-scroll class="overflow-x-auto rounded-xl bg-white shadow-sm dark:bg-slate-900">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+                <tr>
+                  <th scope="col" class="px-4 py-3">Cliente</th>
+                  <th scope="col" class="px-4 py-3">Agente</th>
+                  <th scope="col" class="px-4 py-3">Skills contratadas</th>
+                  <th scope="col" class="px-4 py-3">Inicio</th>
+                  <th scope="col" class="px-4 py-3">Fin</th>
+                  <th scope="col" class="px-4 py-3">Estado</th>
+                  <th scope="col" class="px-4 py-3 text-right">Importe pagado</th>
+                  <th scope="col" class="px-4 py-3 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="contracts-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============ 6. LOG DE ERRORES ============ -->
+        <section id="errores" data-section="errores" aria-labelledby="errores-heading" class="hidden space-y-4">
+          <h2 id="errores-heading" class="sr-only">Log de errores</h2>
+          <p class="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+            Gravedad:
+            <span class="rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700 dark:bg-red-500/15 dark:text-red-300">Autenticación · crítico</span>
+            <span class="rounded-full bg-orange-100 px-2 py-0.5 font-medium text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">Límite de tasa · alto</span>
+            <span class="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">Timeout · medio</span>
+            <span class="rounded-full bg-sky-100 px-2 py-0.5 font-medium text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">Parseo · bajo</span>
+          </p>
+          <div data-scroll class="overflow-x-auto rounded-xl bg-white shadow-sm dark:bg-slate-900">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+                <tr>
+                  <th scope="col" class="px-4 py-3">Timestamp</th>
+                  <th scope="col" class="px-4 py-3">Agente</th>
+                  <th scope="col" class="px-4 py-3">Tipo</th>
+                  <th scope="col" class="px-4 py-3">Descripción</th>
+                  <th scope="col" class="px-4 py-3">Estado</th>
+                  <th scope="col" class="px-4 py-3 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="errors-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- ============ MODAL GENÉRICO ============ -->
+  <!-- <dialog> nativo: showModal() bloquea el fondo y Escape lo cierra. El contenido lo pone JS. -->
+  <dialog id="modal" aria-labelledby="modal-title"
+    class="m-auto w-full max-w-lg rounded-xl bg-white p-0 text-slate-800 shadow-xl backdrop:bg-slate-900/60 dark:bg-slate-900 dark:text-slate-100">
+    <div class="p-6">
+      <div class="mb-4 flex items-start justify-between gap-4">
+        <h2 id="modal-title" class="text-lg font-semibold">Detalle</h2>
+        <button type="button" data-modal-close aria-label="Cerrar"
+          class="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">✕</button>
+      </div>
+      <div id="modal-body" class="text-sm"></div>
+    </div>
+  </dialog>
+
+  <script>
+    // =====================================================================
+    // DATOS (hardcodeados). Una sola fuente de verdad: las tablas, los
+    // contadores y las métricas se calculan desde aquí, así cuadran siempre.
+    // =====================================================================
+    const AGENT_BASE_FEE = 200;
+
+    let skills = [
+      { id: "web", name: "Navegación web", price: 40, description: "Navega sitios, completa formularios y extrae información de páginas públicas." },
+      { id: "docs", name: "Lectura de documentos", price: 30, description: "Lee PDF, Word y planillas, y resume o extrae los datos clave." },
+      { id: "calendar", name: "Gestión de calendario", price: 25, description: "Agenda, mueve y cancela reuniones en Google Calendar u Outlook." },
+      { id: "email", name: "Envío de correos", price: 20, description: "Redacta y envía correos de seguimiento o transaccionales." },
+    ];
+
+    let users = [
+      { id: "u1", name: "Camila Rojas", email: "camila.rojas@acmeretail.com", company: "Acme Retail", plan: "Enterprise", status: "Activo", registeredAt: "2026-03-12" },
+      { id: "u2", name: "Diego Fuentes", email: "diego.fuentes@novalogistica.cl", company: "Nova Logística", plan: "Pro", status: "Activo", registeredAt: "2026-05-04" },
+      { id: "u3", name: "Valentina Soto", email: "valentina.soto@bancoaustral.cl", company: "Banco Austral", plan: "Enterprise", status: "Activo", registeredAt: "2026-06-20" },
+      { id: "u4", name: "Martín Pérez", email: "martin.perez@clinicasur.cl", company: "Clínica Sur", plan: "Starter", status: "Suspendido", registeredAt: "2026-04-02" },
+      { id: "u5", name: "Tomás Herrera", email: "tomas.herrera@estudioherrera.cl", company: "Estudio Herrera", plan: "Starter", status: "Pendiente", registeredAt: "2026-11-18" },
+    ];
+
+    let agents = [
+      { id: "a1", name: "Atlas", owner: "Acme Retail", status: "Activo", skillIds: ["web", "docs"], prompt: "Eres Atlas, asistente de compras de Acme Retail. Revisa catálogos de proveedores y resume precios y stock en una tabla." },
+      { id: "a2", name: "Nexo", owner: "Nova Logística", status: "Activo", skillIds: ["calendar", "email"], prompt: "Eres Nexo, coordinador de despachos de Nova Logística. Agenda retiros con los clientes y confirma cada uno por correo." },
+      { id: "a3", name: "Lumen", owner: "Banco Austral", status: "Fallando", skillIds: ["docs", "email"], prompt: "Eres Lumen, analista de documentos de Banco Austral. Lee las solicitudes de crédito y envía un resumen al ejecutivo." },
+      { id: "a4", name: "Orión", owner: "Clínica Sur", status: "Inactivo", skillIds: ["calendar"], prompt: "Eres Orión, recepcionista virtual de Clínica Sur. Agenda y reprograma horas médicas según la disponibilidad." },
+      { id: "a5", name: "Vega", owner: "Acme Retail", status: "Fallando", skillIds: ["web", "docs", "email"], prompt: "Eres Vega, agente de posventa de Acme Retail. Revisa el estado de los pedidos y escribe a los clientes con retraso." },
+    ];
+
+    // Un contrato por agente. Las skills contratadas se copian al crear el contrato
+    // (el precio queda pactado aunque después cambie o se elimine del catálogo).
+    let contracts = [
+      { id: "c1", agentId: "a1", client: "Acme Retail", start: "2026-09-01", end: "2026-11-30", status: "Vigente", discount: { label: "Cupón BIENVENIDA30", amount: 30 } },
+      { id: "c2", agentId: "a2", client: "Nova Logística", start: "2026-10-01", end: "2026-12-31", status: "Vigente", discount: null },
+      { id: "c3", agentId: "a3", client: "Banco Austral", start: "2026-08-15", end: "2027-02-15", status: "Vigente", discount: null },
+      { id: "c4", agentId: "a4", client: "Clínica Sur", start: "2026-06-01", end: "2026-08-31", status: "Finalizado", discount: null },
+      { id: "c5", agentId: "a5", client: "Acme Retail", start: "2026-11-01", end: "2027-01-31", status: "Vigente", discount: { label: "Descuento por volumen", amount: 55 } },
+    ].map((contract) => {
+      const agent = agents.find((a) => a.id === contract.agentId);
+      const lines = agent.skillIds.map((skillId) => {
+        const skill = skills.find((s) => s.id === skillId);
+        return { name: skill.name, price: skill.price };
+      });
+      return { ...contract, agentName: agent.name, lines };
+    });
+
+    let errors = [
+      { id: "e1", timestamp: "2026-11-25 14:32:10", agent: "Vega", type: "Autenticación", description: "Token de OAuth de Gmail expirado al enviar un correo.", status: "Abierto",
+        trace: "AuthError: invalid_grant (token expired)\n    at GmailClient.send (skills/email/gmail.ts:88:13)\n    at EmailSkill.run (skills/email/index.ts:41:9)\n    at AgentRuntime.execute (runtime/agent.ts:212:5)\nagent=Vega client=\"Acme Retail\" task=followup-order-1842 attempt=3/3" },
+      { id: "e2", timestamp: "2026-11-25 11:05:47", agent: "Lumen", type: "Timeout", description: "La lectura de un PDF de 180 páginas superó los 60 s.", status: "Abierto",
+        trace: "TimeoutError: operation exceeded 60000 ms\n    at PdfReader.extract (skills/docs/pdf.ts:134:11)\n    at DocsSkill.run (skills/docs/index.ts:57:15)\n    at AgentRuntime.execute (runtime/agent.ts:212:5)\nagent=Lumen client=\"Banco Austral\" file=solicitud-credito-0931.pdf pages=180" },
+      { id: "e3", timestamp: "2026-11-24 18:20:03", agent: "Vega", type: "Límite de tasa", description: "El sitio del proveedor respondió 429 Too Many Requests.", status: "Abierto",
+        trace: "HttpError: 429 Too Many Requests (retry-after: 120)\n    at Browser.goto (skills/web/browser.ts:61:9)\n    at WebSkill.run (skills/web/index.ts:33:7)\n    at AgentRuntime.execute (runtime/agent.ts:212:5)\nagent=Vega client=\"Acme Retail\" url=https://proveedor.example/pedidos" },
+      { id: "e4", timestamp: "2026-11-24 09:41:55", agent: "Lumen", type: "Parseo", description: "No se pudo extraer la tabla de un PDF escaneado.", status: "Abierto",
+        trace: "ParseError: no text layer found (scanned document)\n    at TableExtractor.parse (skills/docs/tables.ts:22:17)\n    at DocsSkill.run (skills/docs/index.ts:64:20)\n    at AgentRuntime.execute (runtime/agent.ts:212:5)\nagent=Lumen client=\"Banco Austral\" file=liquidaciones-2026.pdf" },
+      { id: "e5", timestamp: "2026-11-23 16:12:30", agent: "Atlas", type: "Timeout", description: "La página de catálogo no cargó en 30 s.", status: "Resuelto",
+        trace: "TimeoutError: navigation exceeded 30000 ms\n    at Browser.goto (skills/web/browser.ts:61:9)\n    at WebSkill.run (skills/web/index.ts:33:7)\n    at AgentRuntime.execute (runtime/agent.ts:212:5)\nagent=Atlas client=\"Acme Retail\" url=https://catalogo.example/ofertas" },
+      { id: "e6", timestamp: "2026-11-22 08:03:12", agent: "Nexo", type: "Autenticación", description: "Permisos insuficientes en el calendario compartido.", status: "Resuelto",
+        trace: "AuthError: 403 insufficientPermissions\n    at CalendarClient.insertEvent (skills/calendar/google.ts:47:12)\n    at CalendarSkill.run (skills/calendar/index.ts:29:5)\n    at AgentRuntime.execute (runtime/agent.ts:212:5)\nagent=Nexo client=\"Nova Logística\" calendar=retiros@novalogistica.cl" },
+    ];
+
+    // =====================================================================
+    // HELPERS DE PRESENTACIÓN
+    // =====================================================================
+    const BADGE_COLORS = {
+      green: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+      red: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+      amber: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
+      orange: "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300",
+      blue: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
+      gray: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300",
+    };
+    // Qué color lleva cada estado o tipo (una tabla de decisión en vez de muchos if)
+    const STATUS_COLOR = {
+      Activo: "green", Suspendido: "red", Pendiente: "amber", Inactivo: "gray", Fallando: "red",
+      Vigente: "green", Finalizado: "gray", Abierto: "amber", Resuelto: "gray",
+      Autenticación: "red", "Límite de tasa": "orange", Timeout: "amber", Parseo: "blue",
+    };
+
+    const money = new Intl.NumberFormat("es-CL", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+    const formatDate = (iso) => iso.split("-").reverse().join("-");
+
+    function badge(text) {
+      const color = BADGE_COLORS[STATUS_COLOR[text] || "gray"];
+      return `<span class="inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${color}">${text}</span>`;
+    }
+
+    function chip(text) {
+      return `<li class="whitespace-nowrap rounded-md bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">${text}</li>`;
+    }
+
+    // Dropdown ⋮ reutilizable. actions = [{ label, action, danger? }]
+    function actionsMenu(id, actions) {
+      const items = actions.map((item) => `
+        <button type="button" role="menuitem" data-action="${item.action}" data-id="${id}"
+          class="block w-full px-4 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700 ${item.danger ? "text-red-600 dark:text-red-400" : ""}">
+          ${item.label}
+        </button>`).join("");
+      return `
+        <div class="relative inline-block text-left" data-dropdown>
+          <button type="button" data-dropdown-toggle aria-haspopup="menu" aria-expanded="false" aria-label="Acciones"
+            class="rounded-lg px-2 py-1 text-lg leading-none text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">⋮</button>
+          <div role="menu" data-dropdown-menu
+            class="absolute right-0 top-full z-30 mt-1 hidden w-48 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+            ${items}
+          </div>
+        </div>`;
+    }
+
+    const contractTotal = (c) => AGENT_BASE_FEE + c.lines.reduce((sum, line) => sum + line.price, 0) - (c.discount ? c.discount.amount : 0);
+    const rowClass = "border-t border-slate-200 dark:border-slate-800";
+
+    // =====================================================================
+    // RENDER DE CADA SECCIÓN
+    // =====================================================================
+    function renderDashboard() {
+      document.getElementById("metric-revenue").textContent = money.format(contracts.reduce((sum, c) => sum + contractTotal(c), 0));
+      document.getElementById("metric-discounts").textContent = money.format(contracts.reduce((sum, c) => sum + (c.discount ? c.discount.amount : 0), 0));
+      document.getElementById("metric-active").textContent = agents.filter((a) => a.status === "Activo").length;
+      document.getElementById("metric-failing").textContent = agents.filter((a) => a.status === "Fallando").length;
+    }
+
+    function renderUsers() {
+      document.getElementById("users-body").innerHTML = users.map((u) => `
+        <tr class="${rowClass}">
+          <td class="px-4 py-3 font-medium">${u.name}</td>
+          <td class="px-4 py-3 text-slate-500 dark:text-slate-400">${u.email}</td>
+          <td class="px-4 py-3">${u.plan}</td>
+          <td class="px-4 py-3">${badge(u.status)}</td>
+          <td class="px-4 py-3 text-right">${actionsMenu(u.id, [
+            { label: "Ver detalle", action: "view-user" },
+            { label: "Eliminar", action: "delete-user", danger: true },
+          ])}</td>
+        </tr>`).join("");
+    }
+
+    function renderAgents() {
+      document.getElementById("agents-list").innerHTML = agents.map((a) => `
+        <li class="rounded-xl bg-white p-5 shadow-sm dark:bg-slate-900">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h3 class="font-semibold">${a.name}</h3>
+              <p class="text-sm text-slate-500 dark:text-slate-400">Propietario: ${a.owner}</p>
+            </div>
+            <div class="flex items-center gap-2">
+              ${badge(a.status)}
+              ${actionsMenu(a.id, [
+                { label: "Configurar", action: "configure-agent" },
+                { label: "Eliminar", action: "delete-agent", danger: true },
+              ])}
+            </div>
+          </div>
+          <button type="button" data-collapse-toggle aria-expanded="false" aria-controls="skills-${a.id}"
+            class="mt-3 flex items-center gap-1 text-sm font-medium text-indigo-600 dark:text-indigo-400">
+            Skills (${a.skillIds.length})
+            <span data-chevron aria-hidden="true" class="inline-block transition-transform duration-300">▾</span>
+          </button>
+          <!-- Colapsable: animar grid-template-rows de 0fr a 1fr da una transición de altura sin conocer la altura -->
+          <div id="skills-${a.id}" class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 ease-out">
+            <div class="overflow-hidden">
+              <ul class="flex flex-wrap gap-2 pt-3">
+                ${a.skillIds.map((id) => chip(skills.find((s) => s.id === id).name)).join("")}
+              </ul>
+            </div>
+          </div>
+        </li>`).join("");
+    }
+
+    function renderSkills() {
+      document.getElementById("skills-list").innerHTML = skills.map((s) => {
+        const count = agents.filter((a) => a.skillIds.includes(s.id)).length;
+        return `
+          <li class="rounded-xl bg-white p-5 shadow-sm dark:bg-slate-900">
+            <div class="flex items-start justify-between gap-3">
+              <h3 class="font-semibold">${s.name}</h3>
+              ${actionsMenu(s.id, [
+                { label: "Ver detalle", action: "view-skill" },
+                { label: "Eliminar", action: "delete-skill", danger: true },
+              ])}
+            </div>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">${s.description}</p>
+            <div class="mt-4 flex items-center justify-between text-sm">
+              <span class="rounded-full bg-indigo-50 px-2.5 py-0.5 font-medium text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">
+                ${count} ${count === 1 ? "agente la tiene" : "agentes la tienen"} habilitada
+              </span>
+              <span class="font-semibold">${money.format(s.price)}</span>
+            </div>
+          </li>`;
+      }).join("");
+    }
+
+    function renderContracts() {
+      document.getElementById("contracts-body").innerHTML = contracts.map((c) => `
+        <tr class="${rowClass}">
+          <td class="px-4 py-3 font-medium">${c.client}</td>
+          <td class="px-4 py-3">${c.agentName}</td>
+          <td class="px-4 py-3"><ul class="flex flex-wrap gap-1">${c.lines.map((line) => chip(line.name)).join("")}</ul></td>
+          <td class="whitespace-nowrap px-4 py-3">${formatDate(c.start)}</td>
+          <td class="whitespace-nowrap px-4 py-3">${formatDate(c.end)}</td>
+          <td class="px-4 py-3">${badge(c.status)}</td>
+          <td class="px-4 py-3 text-right font-semibold">${money.format(contractTotal(c))}</td>
+          <td class="px-4 py-3 text-right">${actionsMenu(c.id, [{ label: "Ver detalle", action: "view-contract" }])}</td>
+        </tr>`).join("");
+    }
+
+    function renderErrors() {
+      document.getElementById("errors-body").innerHTML = errors.map((e) => `
+        <tr class="${rowClass} ${e.status === "Resuelto" ? "opacity-50" : ""}">
+          <td class="whitespace-nowrap px-4 py-3 font-mono text-xs">${e.timestamp}</td>
+          <td class="px-4 py-3 font-medium">${e.agent}</td>
+          <td class="px-4 py-3">${badge(e.type)}</td>
+          <td class="px-4 py-3">${e.description}</td>
+          <td class="px-4 py-3">${badge(e.status)}</td>
+          <td class="px-4 py-3 text-right">${actionsMenu(e.id, [
+            { label: "Ver detalle", action: "view-error" },
+            { label: "Marcar como resuelto", action: "resolve-error" },
+          ])}</td>
+        </tr>`).join("");
+    }
+
+    function renderAll() {
+      renderDashboard();
+      renderUsers();
+      renderAgents();
+      renderSkills();
+      renderContracts();
+      renderErrors();
+    }
+
+    // =====================================================================
+    // MODAL
+    // =====================================================================
+    const modal = document.getElementById("modal");
+
+    function openModal(title, bodyHtml) {
+      document.getElementById("modal-title").textContent = title;
+      document.getElementById("modal-body").innerHTML = bodyHtml;
+      modal.showModal();
+    }
+
+    // Lista de definición <dl> para mostrar un registro como "campo: valor"
+    function detailList(rows) {
+      return `<dl class="grid grid-cols-3 gap-x-4 gap-y-2">${rows.map(([label, value]) => `
+        <dt class="text-slate-500 dark:text-slate-400">${label}</dt><dd class="col-span-2">${value}</dd>`).join("")}</dl>`;
+    }
+
+    modal.querySelector("[data-modal-close]").addEventListener("click", () => modal.close());
+    // Clic en el backdrop: el evento llega al <dialog> mismo (el contenido está dentro del div con padding)
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) modal.close();
+    });
+
+    // =====================================================================
+    // ACCIONES DE LOS DROPDOWNS
+    // =====================================================================
+    const ACTIONS = {
+      "view-user": (id) => {
+        const u = users.find((x) => x.id === id);
+        const owned = agents.filter((a) => a.owner === u.company).map((a) => a.name);
+        openModal(u.name, detailList([
+          ["Email", u.email], ["Empresa", u.company], ["Plan", u.plan], ["Estado", badge(u.status)],
+          ["Registro", formatDate(u.registeredAt)], ["Agentes", owned.length ? owned.join(", ") : "Sin agentes"],
+        ]));
+      },
+      "delete-user": (id) => {
+        const u = users.find((x) => x.id === id);
+        if (confirm(`¿Eliminar a ${u.name}?`)) { users = users.filter((x) => x.id !== id); renderAll(); }
+      },
+      "configure-agent": (id) => {
+        const a = agents.find((x) => x.id === id);
+        openModal(`Configurar ${a.name}`, `
+          <label for="agent-prompt" class="mb-2 block font-medium">Prompt de sistema</label>
+          <textarea id="agent-prompt" rows="6"
+            class="w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-slate-700 dark:bg-slate-950"></textarea>
+          <div class="mt-4 flex justify-end gap-2">
+            <button type="button" id="save-prompt" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Guardar</button>
+          </div>`);
+        // .value en vez de meterlo en el HTML: el texto del usuario nunca se interpreta como HTML
+        document.getElementById("agent-prompt").value = a.prompt;
+        document.getElementById("save-prompt").addEventListener("click", () => {
+          a.prompt = document.getElementById("agent-prompt").value;
+          modal.close();
+        });
+      },
+      "delete-agent": (id) => {
+        const a = agents.find((x) => x.id === id);
+        if (confirm(`¿Eliminar el agente ${a.name}?`)) { agents = agents.filter((x) => x.id !== id); renderAll(); }
+      },
+      "view-skill": (id) => {
+        const s = skills.find((x) => x.id === id);
+        const using = agents.filter((a) => a.skillIds.includes(id)).map((a) => a.name);
+        openModal(s.name, detailList([
+          ["Descripción", s.description], ["Precio", money.format(s.price)],
+          ["Agentes", using.length ? using.join(", ") : "Ningún agente"],
+        ]));
+      },
+      "delete-skill": (id) => {
+        const s = skills.find((x) => x.id === id);
+        if (confirm(`¿Eliminar la skill ${s.name}?`)) {
+          skills = skills.filter((x) => x.id !== id);
+          agents.forEach((a) => { a.skillIds = a.skillIds.filter((skillId) => skillId !== id); });
+          renderAll();
+        }
+      },
+      "view-contract": (id) => {
+        const c = contracts.find((x) => x.id === id);
+        const subtotal = AGENT_BASE_FEE + c.lines.reduce((sum, line) => sum + line.price, 0);
+        const line = (label, value, extra = "") => `<tr class="${rowClass}"><td class="py-2 ${extra}">${label}</td><td class="py-2 text-right ${extra}">${value}</td></tr>`;
+        openModal(`Contrato ${c.client} · ${c.agentName}`, `
+          ${detailList([["Período", `${formatDate(c.start)} → ${formatDate(c.end)}`], ["Estado", badge(c.status)]])}
+          <table class="mt-4 w-full text-sm">
+            <tbody>
+              ${line(`Tarifa base del agente ${c.agentName}`, money.format(AGENT_BASE_FEE))}
+              ${c.lines.map((l) => line(`Skill: ${l.name}`, money.format(l.price))).join("")}
+              ${line("Subtotal", money.format(subtotal), "font-medium")}
+              ${c.discount ? line(c.discount.label, `− ${money.format(c.discount.amount)}`, "text-amber-700 dark:text-amber-300") : ""}
+              ${line("Total pagado", money.format(contractTotal(c)), "font-bold")}
+            </tbody>
+          </table>`);
+      },
+      "view-error": (id) => {
+        const e = errors.find((x) => x.id === id);
+        openModal(`${e.type} · ${e.agent}`, `
+          ${detailList([["Timestamp", e.timestamp], ["Estado", badge(e.status)], ["Descripción", e.description]])}
+          <p class="mb-1 mt-4 font-medium">Traza completa</p>
+          <pre class="overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100 dark:bg-black"></pre>`);
+        document.querySelector("#modal-body pre").textContent = e.trace;
+      },
+      "resolve-error": (id) => {
+        errors.find((x) => x.id === id).status = "Resuelto";
+        renderErrors();
+      },
+    };
+
+    // =====================================================================
+    // DROPDOWNS Y COLAPSABLES (un solo listener en document = delegación de eventos;
+    // funciona también con las filas que se vuelven a renderizar)
+    // =====================================================================
+    function closeAllMenus() {
+      document.querySelectorAll("[data-dropdown-menu]").forEach((menu) => menu.classList.add("hidden"));
+      document.querySelectorAll("[data-dropdown-toggle]").forEach((btn) => btn.setAttribute("aria-expanded", "false"));
+    }
+
+    function openMenu(toggle) {
+      const menu = toggle.nextElementSibling;
+      menu.classList.remove("hidden", "bottom-full", "mb-1");
+      menu.classList.add("top-full", "mt-1");
+      toggle.setAttribute("aria-expanded", "true");
+      // Si el menú no cabe hacia abajo (fin de la tabla o de la pantalla), se abre hacia arriba
+      const container = menu.closest("[data-scroll]");
+      const limit = container ? container.getBoundingClientRect().bottom : window.innerHeight;
+      if (menu.getBoundingClientRect().bottom > limit) {
+        menu.classList.remove("top-full", "mt-1");
+        menu.classList.add("bottom-full", "mb-1");
+      }
+    }
+
+    document.addEventListener("click", (event) => {
+      const toggle = event.target.closest("[data-dropdown-toggle]");
+      if (toggle) {
+        const wasOpen = toggle.getAttribute("aria-expanded") === "true";
+        closeAllMenus(); // solo un menú abierto a la vez
+        if (!wasOpen) openMenu(toggle);
+        return;
+      }
+
+      const actionButton = event.target.closest("[data-action]");
+      if (actionButton) {
+        closeAllMenus();
+        ACTIONS[actionButton.dataset.action](actionButton.dataset.id);
+        return;
+      }
+
+      // Clic fuera de cualquier dropdown → se cierran todos
+      if (!event.target.closest("[data-dropdown]")) closeAllMenus();
+
+      const collapse = event.target.closest("[data-collapse-toggle]");
+      if (collapse) {
+        const panel = document.getElementById(collapse.getAttribute("aria-controls"));
+        const expanded = collapse.getAttribute("aria-expanded") === "true";
+        collapse.setAttribute("aria-expanded", String(!expanded));
+        panel.classList.toggle("grid-rows-[0fr]", expanded);
+        panel.classList.toggle("grid-rows-[1fr]", !expanded);
+        collapse.querySelector("[data-chevron]").classList.toggle("rotate-180", !expanded);
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeAllMenus();
+    });
+
+    // =====================================================================
+    // NAVEGACIÓN ENTRE SECCIONES (por hash: #usuarios, #agentes...)
+    // =====================================================================
+    const SECTION_TITLES = {
+      dashboard: "Dashboard", usuarios: "Gestión de usuarios", agentes: "Gestión de agentes",
+      skills: "Skills", contrataciones: "Contrataciones de agentes", errores: "Log de errores",
+    };
+    const NAV_ACTIVE = ["bg-indigo-50", "text-indigo-700", "font-semibold", "dark:bg-indigo-500/20", "dark:text-indigo-300"];
+    const NAV_IDLE = ["text-slate-600", "hover:bg-slate-100", "dark:text-slate-300", "dark:hover:bg-slate-800"];
+
+    function showSection() {
+      const requested = location.hash.slice(1);
+      const current = SECTION_TITLES[requested] ? requested : "dashboard";
+
+      document.querySelectorAll("[data-section]").forEach((section) => {
+        section.classList.toggle("hidden", section.dataset.section !== current);
+      });
+      document.querySelectorAll("[data-nav]").forEach((link) => {
+        const isActive = link.dataset.nav === current;
+        link.classList.remove(...(isActive ? NAV_IDLE : NAV_ACTIVE));
+        link.classList.add(...(isActive ? NAV_ACTIVE : NAV_IDLE));
+        if (isActive) link.setAttribute("aria-current", "page");
+        else link.removeAttribute("aria-current");
+      });
+      document.getElementById("section-title").textContent = SECTION_TITLES[current];
+      closeAllMenus();
+    }
+
+    window.addEventListener("hashchange", showSection);
+
+    // =====================================================================
+    // MODO OSCURO: la clase .dark en <html> no cambia al navegar, así que el modo
+    // se mantiene entre secciones. localStorage lo conserva también al recargar.
+    // =====================================================================
+    function syncThemeButton() {
+      const isDark = document.documentElement.classList.contains("dark");
+      document.getElementById("theme-icon").textContent = isDark ? "☀️" : "🌙";
+      const button = document.getElementById("theme-toggle");
+      button.setAttribute("aria-pressed", String(isDark));
+      button.setAttribute("aria-label", isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro");
+    }
+
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+      const isDark = document.documentElement.classList.toggle("dark");
+      try { localStorage.setItem("agenthub-theme", isDark ? "dark" : "light"); } catch (error) { /* modo privado */ }
+      syncThemeButton();
+    });
+
+    // Arranque
+    renderAll();
+    showSection();
+    syncThemeButton();
+  </script>
+</body>
+</html>
